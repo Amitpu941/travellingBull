@@ -1,0 +1,7 @@
+{
+  "name": "bull-buddy",
+  "version": "0.1.0",
+  "description": "A bull that walks along the edge of Claude Code while you work",
+  "license": "MIT",
+  "types": "./types/index.d.ts"
+}

@@ -1,0 +1,5 @@
+{
+  "name": "travelling-bull",
+  "owner": { "name": "Amitpu941" },
+  "plugins": [{ "name": "bull-buddy", "source": "./" }]
+}
