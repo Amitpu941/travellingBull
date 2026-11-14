@@ -21,13 +21,11 @@ test('the terminal band holds the animated bull', async $ => {
   await ui.unmount()
 })
 
-test('the apps get a bull drawn as plain text', async $ => {
+test('the apps get the bull as a picture', async $ => {
   for (const surface of ['desktop', 'mobile'] as const) {
     const ui = await $.ui.mount({ ...BAND, surface })
 
-    expect((await ui.find({ type: 'Text', text: /\(••\)/ }))?.text).toContain(
-      '(••)',
-    )
+    expect(await ui.find({ type: 'Svg' })).toBeTruthy()
     await ui.unmount()
   }
 })
@@ -40,6 +38,6 @@ test('the backdrop draws the edge walk on desktop', async $ => {
     props: { scene: 'pasture', plugin: 'bull-buddy', glass: false },
   })
 
-  expect(await ui.find({ type: 'Text', text: /\(••\)/ })).toBeTruthy()
+  expect(await ui.find({ type: 'Svg' })).toBeTruthy()
   await ui.unmount()
 })

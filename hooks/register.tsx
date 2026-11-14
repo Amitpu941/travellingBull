@@ -6,51 +6,81 @@ const SCENE = 'pasture'
 const isHidden = atom({ plugin: 'bull-buddy', key: 'isHidden' } as const, false)
 const step = atom({ plugin: 'bull-buddy', key: 'step' } as const, 0)
 
-// The same bull the terminal's surface module draws (hooks/bull.tsx).
-const WIDTH = 12
+// The same pixel bull the terminal's surface module draws (hooks/bull.tsx):
+// G body, H horn, S snout; anything else is see-through (eyes, nostrils).
+const COLORS: Record<string, string> = {
+  G: '#2FA36B',
+  H: '#E3B04B',
+  S: '#F2B5A0',
+}
+const FRAMES = [
+  [
+    'H.........H',
+    'HHGGGGGGGHH',
+    '.GGDGGGDGG.',
+    'GGGGGGGGGGG',
+    '.GSSDSDSSG.',
+    '.G.G...G.G.',
+  ],
+  [
+    'H.........H',
+    'HHGGGGGGGHH',
+    '.GGDGGGDGG.',
+    'GGGGGGGGGGG',
+    '.GSSDSDSSG.',
+    '..GG...GG..',
+  ],
+]
+
+function svgOf(frame: readonly string[]): string {
+  let rects = ''
+
+  frame.forEach((row, y) => {
+    Array.from(row).forEach((pixel, x) => {
+      const fill = COLORS[pixel]
+
+      if (fill !== undefined) {
+        rects += `<rect x="${x}" y="${y}" width="1.02" height="1.02" fill="${fill}"/>`
+      }
+    })
+  })
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 11 6" shape-rendering="crispEdges">${rects}</svg>`
+}
+
+const SVGS = FRAMES.map(svgOf)
+const ALT = 'A small green pixel bull with gold horns'
+// Roughly how many text columns and rows the drawn bull covers in the apps.
+const WIDTH = 8
 const HEIGHT = 2
-const RIGHT = {
-  top: ['~╭━━━━━(\\_/)', '≈╭━━━━━(\\_/)'],
-  legs: [' ┃┃  ┃┃ (••)', ' ╱╲  ╱╲ (••)'],
-}
-const LEFT = {
-  top: ['(\\_/)━━━━━╮~', '(\\_/)━━━━━╮≈'],
-  legs: ['(••) ┃┃  ┃┃ ', '(••) ╱╲  ╱╲ '],
-}
 
-type Spot = { x: number; y: number; isFacingRight: boolean }
+type Spot = { x: number; y: number }
 
-const pace = (tick: number, columns: number): Spot => {
+function pace(tick: number, columns: number): Spot {
   const span = Math.max(1, columns - WIDTH)
   const at = tick % (span * 2)
 
-  return at < span
-    ? { x: at, y: 0, isFacingRight: true }
-    : { x: span * 2 - at, y: 0, isFacingRight: false }
+  return { x: at < span ? at : span * 2 - at, y: 0 }
 }
 
-const patrol = (tick: number, columns: number, rows: number): Spot => {
+function patrol(tick: number, columns: number, rows: number): Spot {
   const xMax = Math.max(1, columns - WIDTH)
   const yMax = Math.max(1, rows - HEIGHT)
   let at = tick % ((xMax + yMax) * 2)
 
   if (at < xMax) {
-    return { x: at, y: yMax, isFacingRight: true }
+    return { x: at, y: yMax }
   }
 
   at -= xMax
 
   if (at < yMax) {
-    return { x: xMax, y: yMax - at, isFacingRight: false }
+    return { x: xMax, y: yMax - at }
   }
 
   at -= yMax
 
-  if (at < xMax) {
-    return { x: xMax - at, y: 0, isFacingRight: false }
-  }
-
-  return { x: 0, y: at - xMax, isFacingRight: true }
+  return at < xMax ? { x: xMax - at, y: 0 } : { x: 0, y: at - xMax }
 }
 
 // Where no surface module can be trusted to draw, the hook animates.
@@ -97,12 +127,12 @@ export const register: Register = on => {
       const { Box, Client } = $.ui.resolve(e)
 
       return (
-        <Box width={e.props.bodyColumns} height={2}>
+        <Box width={e.props.bodyColumns} height={3}>
           <Client
             key="bull"
             module="./bull.tsx"
             width="100%"
-            height={2}
+            height={3}
             props={{ mode: 'band', isWorking: e.props.isWorking }}
           />
         </Box>
@@ -110,20 +140,15 @@ export const register: Register = on => {
     }
 
     walk($)
-    const { Box, Text } = $.ui.resolve(e)
+    const { Box, Svg } = $.ui.resolve(e)
     const tick = await read($, step)
     const spot = pace(tick, Math.max(WIDTH + 8, e.props.bodyColumns || 60))
-    const sprite = spot.isFacingRight ? RIGHT : LEFT
-    const color = e.props.isWorking ? 'green' : undefined
+    // Steady walk when idle, a quick-stepping charge while Claude works.
+    const stride = e.props.isWorking ? (tick / 2) % 2 : Math.floor(tick / 4) % 2
 
     return (
-      <Box flexDirection="column" marginLeft={spot.x}>
-        <Text mono color={color}>
-          {sprite.top[e.props.isWorking ? 1 : 0]}
-        </Text>
-        <Text mono color={color}>
-          {sprite.legs[(tick / 2) % 2]}
-        </Text>
+      <Box marginLeft={spot.x}>
+        <Svg source={SVGS[stride] ?? ''} alt={ALT} width={44} height={24} />
       </Box>
     )
   })
@@ -136,22 +161,26 @@ export const register: Register = on => {
 
     const columns = e.viewport?.columns ?? 0
     const rows = e.viewport?.rows ?? 0
-    const { Box, Text } = $.ui.resolve(e)
+    const { Box } = $.ui.resolve(e)
 
-    if (await read($, isHidden)) {
+    if (e.surface === 'terminal' || (await read($, isHidden))) {
       return <Box />
     }
 
     walk($)
+    const { Svg } = $.ui.resolve(e)
     const tick = await read($, step)
     const spot = patrol(tick, columns || 100, rows || 30)
-    const sprite = spot.isFacingRight ? RIGHT : LEFT
 
     return (
       <Box width="100%" height="100%">
-        <Box flexDirection="column" marginLeft={spot.x} marginTop={spot.y}>
-          <Text mono>{sprite.top[0]}</Text>
-          <Text mono>{sprite.legs[(tick / 2) % 2]}</Text>
+        <Box marginLeft={spot.x} marginTop={spot.y}>
+          <Svg
+            source={SVGS[Math.floor(tick / 4) % 2] ?? ''}
+            alt={ALT}
+            width={66}
+            height={36}
+          />
         </Box>
       </Box>
     )
