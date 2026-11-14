@@ -1,6 +1,6 @@
 # bull-buddy
 
-A small bull that keeps you company in Claude Code. It paces back and forth in the band above the prompt, walking steadily while Claude is idle and charging (green, quick steps) while Claude works. In the Claude desktop app it also walks around the edge of the window, behind the conversation.
+A small bull that keeps you company in Claude Code. It paces back and forth in the band above the prompt, walking steadily while Claude is idle and charging (green, quick steps) while Claude works.
 
 Type `/bull` to hide it or bring it back.
 

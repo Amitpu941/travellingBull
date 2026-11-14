@@ -29,15 +29,3 @@ test('the apps get the bull as a picture', async $ => {
     await ui.unmount()
   }
 })
-
-test('the backdrop draws the edge walk on desktop', async $ => {
-  const ui = await $.ui.mount({
-    plugin: 'bull-buddy',
-    component: 'Backdrop',
-    surface: 'desktop',
-    props: { scene: 'pasture', plugin: 'bull-buddy', glass: false },
-  })
-
-  expect(await ui.find({ type: 'Svg' })).toBeTruthy()
-  await ui.unmount()
-})

@@ -1,8 +1,6 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
-const PLUGIN = 'bull-buddy'
-const SCENE = 'pasture'
 const isHidden = atom({ plugin: 'bull-buddy', key: 'isHidden' } as const, false)
 const step = atom({ plugin: 'bull-buddy', key: 'step' } as const, 0)
 
@@ -63,26 +61,6 @@ function pace(tick: number, columns: number): Spot {
   return { x: at < span ? at : span * 2 - at, y: 0 }
 }
 
-function patrol(tick: number, columns: number, rows: number): Spot {
-  const xMax = Math.max(1, columns - WIDTH)
-  const yMax = Math.max(1, rows - HEIGHT)
-  let at = tick % ((xMax + yMax) * 2)
-
-  if (at < xMax) {
-    return { x: at, y: yMax }
-  }
-
-  at -= xMax
-
-  if (at < yMax) {
-    return { x: xMax, y: yMax - at }
-  }
-
-  at -= yMax
-
-  return at < xMax ? { x: xMax - at, y: 0 } : { x: 0, y: at - xMax }
-}
-
 // Where no surface module can be trusted to draw, the hook animates.
 let isWalking = false
 
@@ -103,11 +81,6 @@ export const register: Register = on => {
       name: 'bull',
       description: 'Show or hide your bull',
     })
-    // Desktop and mobile apps only: lets the bull walk the window's edge.
-    void $.theme
-      .set({ backdrop: { scene: SCENE, glass: false } })
-      .catch(() => undefined)
-
     return next(e)
   })
 
@@ -148,40 +121,7 @@ export const register: Register = on => {
 
     return (
       <Box marginLeft={spot.x}>
-        <Svg source={SVGS[stride] ?? ''} alt={ALT} width={44} height={24} />
-      </Box>
-    )
-  })
-
-  // The backdrop behind the conversation: the bull walks the whole edge.
-  on('ui.render', { component: 'Backdrop' }, async ($, e, next) => {
-    if (e.props.plugin !== PLUGIN || e.props.scene !== SCENE) {
-      return next(e)
-    }
-
-    const columns = e.viewport?.columns ?? 0
-    const rows = e.viewport?.rows ?? 0
-    const { Box } = $.ui.resolve(e)
-
-    if (e.surface === 'terminal' || (await read($, isHidden))) {
-      return <Box />
-    }
-
-    walk($)
-    const { Svg } = $.ui.resolve(e)
-    const tick = await read($, step)
-    const spot = patrol(tick, columns || 100, rows || 30)
-
-    return (
-      <Box width="100%" height="100%">
-        <Box marginLeft={spot.x} marginTop={spot.y}>
-          <Svg
-            source={SVGS[Math.floor(tick / 4) % 2] ?? ''}
-            alt={ALT}
-            width={66}
-            height={36}
-          />
-        </Box>
+        <Svg source={SVGS[stride] ?? ''} alt={ALT} width={33} height={18} />
       </Box>
     )
   })
